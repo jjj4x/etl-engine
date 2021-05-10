@@ -1,0 +1,6 @@
+Tox
+PyTest
+WeMake-Python-StyleGuide
+ISort<5
+Coverage
+Sphinx
