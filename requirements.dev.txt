@@ -4,3 +4,5 @@ WeMake-Python-StyleGuide
 ISort<5
 Coverage
 Sphinx
+psycopg2-binary
+PySpark-Stubs

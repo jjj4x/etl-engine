@@ -4,29 +4,30 @@ from os import environ
 from pyspark import SparkConf, sql
 from pyspark.sql.types import LongType, StructType, StructField, StringType, IntegerType, DateType
 
-from etl_engine import engine
+from etl_engine import io_adapters
 
 
+# noinspection PyUnresolvedReferences
 class TestHDFSWriter:
     def test_write_one_column_parquet_overwrite(self):
-        filename = 'hdfs://localhost:8020/test_write_one_column_parquet_overwrite.parquet'
+        filename = 'hdfs://hpdc:8020/test_write_one_column_parquet_overwrite.parquet'
 
         # Conf
-        conf = engine.ETLConf()
+        conf = io_adapters.ETLConf()
         conf.spark.write.mode = 'overwrite'
         conf.spark.write.format = 'parquet'
         conf.spark.write.options = {'spark.sql.parquet.compression.codec': 'snappy'}
         conf.spark.conf = [('spark.app.name', __name__), ('spark.master', 'local[2]')]
-        conf.etl.target.name = filename
+        conf.etl.target.location = filename
 
         # Session
         spark_conf = SparkConf().setAll(conf.spark.conf)
         with sql.SparkSession.builder.config(conf=spark_conf).getOrCreate() as spark:
             df = spark.range(500).toDF("number")
             # Run
-            engine.HDFSWriter().write(df, conf)
+            io_adapters.HDFSWriter(spark).write(df, conf)
 
-            df = spark.read.parquet(conf.etl.target.name)
+            df = spark.read.parquet(conf.etl.target.location)
 
             # Assert
             assert df.count() == 500
@@ -34,14 +35,14 @@ class TestHDFSWriter:
             assert isinstance(df.schema[0].dataType, LongType)
 
     def test_write_many_columns_parquet_append(self):
-        filename = 'hdfs://localhost:8020/test_write_many_columns_parquet_append.parquet'
+        filename = 'hdfs://hpdc:8020/test_write_many_columns_parquet_append.parquet'
 
         # Conf
-        conf = engine.ETLConf()
+        conf = io_adapters.ETLConf()
         conf.spark.write.mode = 'append'
         conf.spark.write.format = 'parquet'
         conf.spark.conf = [('spark.app.name', __name__), ('spark.master', 'local[2]')]
-        conf.etl.target.name = filename
+        conf.etl.target.location = filename
 
         # Session
         spark_conf = SparkConf().setAll(conf.spark.conf)
@@ -68,9 +69,9 @@ class TestHDFSWriter:
             df.createTempView('my_view')
 
             # First Run
-            writer = engine.HDFSWriter()
+            writer = io_adapters.HDFSWriter(spark)
             writer.write(df, conf)
-            df_after_first_run = spark.read.parquet(conf.etl.target.name)
+            df_after_first_run = spark.read.parquet(conf.etl.target.location)
 
             # Assert
             assert df_after_first_run.count() == 100
@@ -78,30 +79,30 @@ class TestHDFSWriter:
 
             # Second Run
             writer.write(df, conf)
-            df_after_second_run = spark.read.parquet(conf.etl.target.name)
+            df_after_second_run = spark.read.parquet(conf.etl.target.location)
 
             # Assert
             assert df_after_second_run.count() == 200
             assert df_after_first_run.schema.fieldNames() == ['id', 'name', 'dt']
 
     def test_write_many_columns_parquet_partitioned_overwrite(self):
-        filename = 'hdfs://localhost:8020/test_write_many_columns_parquet_partitioned_overwrite.parquet'
+        filename = 'hdfs://hpdc:8020/test_write_many_columns_parquet_partitioned_overwrite.parquet'
 
         # Conf
-        conf = engine.ETLConf()
+        conf = io_adapters.ETLConf()
         conf.spark.write.mode = 'overwrite'
         conf.spark.write.format = 'parquet'
         conf.spark.write.partitionBy = 'sex'  # Partitioned
         conf.spark.conf = [('spark.app.name', __name__), ('spark.master', 'local[2]')]
-        conf.etl.target.name = filename
+        conf.etl.target.location = filename
 
         # Session
         spark_conf = SparkConf().setAll(conf.spark.conf)
         with sql.SparkSession.builder.config(conf=spark_conf).getOrCreate() as spark:
             # Fixture
-            ids = range(100)
-            sexes = ['m' for _ in range(50)] + ['f' for _ in range(50)]
-            dates = (date(2000, 1, 1) + timedelta(days=i) for i in range(100))
+            ids = range(200)
+            sexes = ['m' for _ in range(100)] + ['f' for _ in range(100)]
+            dates = (date(2000, 1, 1) + timedelta(days=i) for i in range(200))
             schema = StructType([
                 StructField('id', IntegerType(), nullable=False),
                 StructField('dt', DateType(), nullable=False),
@@ -111,31 +112,37 @@ class TestHDFSWriter:
             df = spark.createDataFrame(zip(ids, dates, sexes), schema=schema)
 
             # Run
-            writer = engine.HDFSWriter()
+            writer = io_adapters.HDFSWriter(spark)
             writer.write(df, conf)
-            df_after_first_run = spark.read.parquet(conf.etl.target.name)
+            df_after_first_run = spark.read.parquet(conf.etl.target.location)
 
             # Assert
-            assert df_after_first_run.count() == 100
+            assert df_after_first_run.count() == 200
             assert sorted(df_after_first_run.schema.fieldNames()) == sorted(['id', 'dt', 'sex'])
             assert df_after_first_run.rdd.getNumPartitions() == 2  # male/female
 
 
-# noinspection SqlResolve
+# noinspection SqlResolve,SqlDialectInspection,SqlNoDataSourceInspection
 class TestTableWriters:
     def test_save_one_column_df_as_table(self):
         # Conf
-        conf = engine.ETLConf()
+        conf = io_adapters.ETLConf()
         conf.spark.write.mode = 'overwrite'
         conf.spark.write.format = 'parquet'
         conf.spark.write.options = {
             'spark.sql.parquet.compression.codec': 'snappy',
             'spark.sql.legacy.allowCreatingManagedTableUsingNonemptyLocation': 'true',
-            'hive.metastore.uris': 'thrift://localhost:10000'
         }
         conf.spark.conf = [
             ('spark.app.name', __name__),
             ('spark.master', 'local[2]'),
+            ('spark.jars', 'https://repo1.maven.org/maven2/org/postgresql/postgresql/42.2.19/postgresql-42.2.19.jar'),
+            ('spark.sql.hive.metastore.uris', 'thrift://hpdc:9083'),  # Optional; will be inferred using hive-site.xml
+            ('spark.sql.hive.metastore.version', '2.3'),  # Optional; will be inferred using hive-site.xml
+            # Because hive.metastore.warehouse.dir property in hive-site.xml is deprecated since Spark 2.0.0.
+            ('spark.sql.warehouse.dir', 'hdfs://hpdc:8020/hive/warehouse'),  # Optional for EXTERNAL TABLES
+            ('spark.sql.catalogImplementation', 'hive'),  # Optional; will be set automatically by enableHiveSupport()
+            ('spark.sql.hive.metastore.jars', f'{environ["HIVE_HOME"]}/lib/*'),  # Other options: maven, builtin
         ]
         conf.etl.target.schema = 'default'
         conf.etl.target.name = 'my_table'
@@ -145,7 +152,7 @@ class TestTableWriters:
         with sql.SparkSession.builder.config(conf=spark_conf).enableHiveSupport().getOrCreate() as spark:
             df = spark.range(500).toDF("number")
             # Run
-            engine.TableWriter().write(df, conf)
+            io_adapters.TableWriter(spark).write(df, conf)
 
             df = spark.sql('select * from my_table')
 
@@ -155,23 +162,21 @@ class TestTableWriters:
             assert isinstance(df.schema[0].dataType, LongType)
 
 
-# noinspection SqlResolve
+# noinspection SqlResolve,SqlDialectInspection,SqlNoDataSourceInspection
 class TestExternalTableWriters:
     def test_external_table(self):
         # Conf
-        conf = engine.ETLConf()
+        conf = io_adapters.ETLConf()
         conf.spark.write.mode = 'overwrite'
         conf.spark.write.format = 'parquet'
         conf.spark.write.options = {
             'spark.sql.parquet.compression.codec': 'snappy',
-            'spark.sql.legacy.allowCreatingManagedTableUsingNonemptyLocation': 'true',
-            'spark.sql.hive.metastore.uris': 'thrift://hpdc:10000',
-            'spark.hadoop.metastore.catalog.default': 'hive',
         }
         conf.spark.conf = [
             ('spark.app.name', __name__),
             ('spark.master', 'local[2]'),
             ('spark.jars', 'https://repo1.maven.org/maven2/org/postgresql/postgresql/42.2.19/postgresql-42.2.19.jar'),
+            ('spark.sql.hive.metastore.jars', f'{environ["HIVE_HOME"]}/lib/*'),  # Other options: maven, builtin
         ]
         conf.etl.target.schema = 'default'
         conf.etl.target.name = 'another_table'
@@ -190,22 +195,23 @@ class TestExternalTableWriters:
             ])
 
             df = spark.createDataFrame(zip(ids, dates, sexes), schema=schema)
-            engine.ExternalTableWriter(spark).write(df, conf)
+            io_adapters.ExternalTableWriter(spark).write(df, conf)
 
-            pass
+            df = spark.sql(f'select * from {conf.etl.target.fqdn}')
+            assert df.count() == 100
 
 
 class TestJDBCWriter:
     def test_load_without_predefined_table(self):
         # Conf
-        conf = engine.ETLConf()
+        conf = io_adapters.ETLConf()
         conf.etl.target.name = 'non_existent_table'
         conf.spark.write.mode = 'overwrite'
         conf.spark.write.format = 'jdbc'
         conf.spark.write.options = {
-            'url': 'jdbc:postgresql://localhost:5432/postgres',
+            'url': 'jdbc:postgresql://postgres:5432/postgres',
             'user': 'postgres',
-            'password': 'password',
+            'password': 'postgres',
             'driver': 'org.postgresql.Driver',
         }
         conf.spark.read.options = conf.spark.write.options
@@ -220,9 +226,16 @@ class TestJDBCWriter:
         with sql.SparkSession.builder.config(conf=spark_conf).getOrCreate() as spark:
             df = spark.range(500).toDF("number")
             # Run
-            engine.JDBCWriter().write(df, conf)
+            io_adapters.JDBCWriter(spark).write(df, conf)
 
-            df = engine.JDBCReader().read(spark, conf, query='(select count(*) qty from non_existent_table) as t')
+            df = (
+                spark
+                .read
+                .format('jdbc')
+                .option('dbtable', '(select count(*) qty from non_existent_table) as t')
+                .options(**conf.spark.read.options)
+                .load()
+            )
 
             # Assert
             assert df.take(1)[0].qty == 500
