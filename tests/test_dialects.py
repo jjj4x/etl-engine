@@ -10,7 +10,7 @@ class TestSQL:
             dialects.Query()
 
         query = dialects.Query(from_='schema.table')
-        assert query.sql == 'select * from schema.table'
+        assert query.sql == 'select * from schema.table where 1 = 1'
 
         query = dialects.Query(
             columns=['first_name', 'last_name', 'dob', 'ssn'],
@@ -19,8 +19,8 @@ class TestSQL:
         query.where.append('dob > "2000-01-01"')
         query.where.append('dob < "2010-01-01"')
         assert query.sql == (
-            'select first_name, last_name, dob, ssn from credit.user where '
-            '(dob > "2000-01-01") and (dob < "2010-01-01")'
+            'select first_name, last_name, dob, ssn from credit.user where 1 = 1 '
+            'and (dob > "2000-01-01") and (dob < "2010-01-01")'
         )
 
         query = dialects.Query(
@@ -34,7 +34,7 @@ class TestSQL:
             'select /* stream(id) */ '
             '*, coalesce(create_date, update_date) as business_date '
             'from account.balance '
-            'where (hwm > 0) or hwm < 1000'
+            'where 1 = 1 and (hwm > 0) or hwm < 1000'
         )
         assert query.sql == other
         assert query == other

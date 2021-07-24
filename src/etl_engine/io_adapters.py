@@ -51,7 +51,7 @@ class HDFSWriter(WriterABC):
             df_writer
             .format(conf.spark.write.format)  # "orc"
             .mode(conf.spark.write.mode)  # "append"
-            .options(**conf.spark.write.options)  # (("orc.dictionary.key.threshold", "1.0"),)
+            .options(**conf.spark.write.options)  # (("orc.dictionary.expression.threshold", "1.0"),)
             .save(conf.etl.target.location)  # "hdfs://localhost:8020/users_with_options.orc"
         )
 
@@ -67,7 +67,7 @@ class TableWriter(WriterABC):
             df_writer
             .format(conf.spark.write.format)  # "orc"
             .mode(conf.spark.write.mode)  # "append"
-            .options(**conf.spark.write.options)  # (("orc.dictionary.key.threshold", "1.0"),)
+            .options(**conf.spark.write.options)  # (("orc.dictionary.expression.threshold", "1.0"),)
             .saveAsTable(conf.etl.target.fqdn)  # "my_table"
         )
 

@@ -17,7 +17,11 @@ class TestHDFSWriter:
         conf.spark.write.mode = 'overwrite'
         conf.spark.write.format = 'parquet'
         conf.spark.write.options = {'spark.sql.parquet.compression.codec': 'snappy'}
-        conf.spark.conf = [('spark.app.name', __name__), ('spark.master', 'local[2]')]
+        conf.spark.conf = [
+            ('spark.app.name', __name__),
+            ('spark.master', 'local[2]'),
+            ('spark.jars', 'https://repo1.maven.org/maven2/org/postgresql/postgresql/42.2.19/postgresql-42.2.19.jar'),
+        ]
         conf.etl.target.location = filename
 
         # Session
@@ -41,7 +45,11 @@ class TestHDFSWriter:
         conf = io_adapters.ETLConf()
         conf.spark.write.mode = 'append'
         conf.spark.write.format = 'parquet'
-        conf.spark.conf = [('spark.app.name', __name__), ('spark.master', 'local[2]')]
+        conf.spark.conf = [
+            ('spark.app.name', __name__),
+            ('spark.master', 'local[2]'),
+            ('spark.jars', 'https://repo1.maven.org/maven2/org/postgresql/postgresql/42.2.19/postgresql-42.2.19.jar'),
+        ]
         conf.etl.target.location = filename
 
         # Session
@@ -93,7 +101,11 @@ class TestHDFSWriter:
         conf.spark.write.mode = 'overwrite'
         conf.spark.write.format = 'parquet'
         conf.spark.write.partitionBy = 'sex'  # Partitioned
-        conf.spark.conf = [('spark.app.name', __name__), ('spark.master', 'local[2]')]
+        conf.spark.conf = [
+            ('spark.app.name', __name__),
+            ('spark.master', 'local[2]'),
+            ('spark.jars', 'https://repo1.maven.org/maven2/org/postgresql/postgresql/42.2.19/postgresql-42.2.19.jar'),
+        ]
         conf.etl.target.location = filename
 
         # Session
