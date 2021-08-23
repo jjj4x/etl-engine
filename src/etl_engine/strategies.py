@@ -8,12 +8,12 @@ from etl_engine.io_adapters import (
     ReaderABC,
     WriterABC,
 )
-from etl_engine.metastore import InMemoryMetastore
+from etl_engine.metastore import MetastoreABC
 
 LOG = getLogger(__name__)
 
 
-class SnapshotETLStrategy:
+class SnapshotStrategy:
     def __init__(self, reader: ReaderABC, writer: WriterABC):
         self.reader = reader
         self.writer = writer
@@ -32,18 +32,18 @@ class SnapshotETLStrategy:
         else:
             raise ValueError('Non relational reader_types are not supported yet.')
 
-        self.writer.write(df, conf)
+        self.writer.write(df, conf, spark)
 
         ...  # TODO: return count and statistics
 
 
 # noinspection SqlDialectInspection
-class SnapshotUseHWMStrategy:
+class HWMStrategy:
     def __init__(
         self,
         reader: ReaderABC,
         writer: WriterABC,
-        metastore: InMemoryMetastore,
+        metastore: MetastoreABC,
     ):
         self.reader = reader
         self.writer = writer
@@ -79,7 +79,7 @@ class SnapshotUseHWMStrategy:
         else:
             raise ValueError('Non relational reader_types are not supported yet.')
 
-        self.writer.write(df, conf)
+        self.writer.write(df, conf, spark)
 
         self.metastore.hwm = new_hwm
 

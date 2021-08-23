@@ -15,11 +15,8 @@ class ReaderABC(ABC):
 
 
 class WriterABC(ABC):
-    def __init__(self, spark: sql.SparkSession):
-        self.spark = spark
-
     @abstractmethod
-    def write(self, df: sql.DataFrame, conf: ETLConf):
+    def write(self, df: sql.DataFrame, conf: ETLConf, spark: Optional[sql.SparkSession] = None):
         """Writes DataFrame to data target."""
 
 
@@ -41,7 +38,7 @@ class JDBCReader(ReaderABC):
 
 
 class HDFSWriter(WriterABC):
-    def write(self, df: sql.DataFrame, conf: ETLConf):
+    def write(self, df: sql.DataFrame, conf: ETLConf, spark: Optional[sql.SparkSession] = None):
         df_writer = df.write
 
         if conf.spark.write.partitionBy:
@@ -57,7 +54,7 @@ class HDFSWriter(WriterABC):
 
 
 class TableWriter(WriterABC):
-    def write(self, df: sql.DataFrame, conf: ETLConf):
+    def write(self, df: sql.DataFrame, conf: ETLConf, spark: Optional[sql.SparkSession] = None):
         df_writer = df.write
 
         if conf.spark.write.partitionBy:
@@ -73,8 +70,8 @@ class TableWriter(WriterABC):
 
 
 class ExternalTableWriter(WriterABC):
-    def write(self, df: sql.DataFrame, conf: ETLConf):
-        HDFSWriter(self.spark).write(df, conf)
+    def write(self, df: sql.DataFrame, conf: ETLConf, spark: Optional[sql.SparkSession] = None):
+        HDFSWriter().write(df, conf)
 
         create_table = '\n'.join([
             'create external table if not exists {fqdn} (',
@@ -96,9 +93,9 @@ class ExternalTableWriter(WriterABC):
         if conf.spark.write.partitionBy:
             query += f'partition by {conf.spark.write.partitionBy}'
 
-        self.spark.sql(query)
+        spark.sql(query)
         if conf.spark.write.partitionBy:
-            self.spark.sql(f'msck repair table {conf.etl.target.fqdn}')
+            spark.sql(f'msck repair table {conf.etl.target.fqdn}')
 
 
 class HDFSReader(ReaderABC):
@@ -121,7 +118,7 @@ class TableReader(ReaderABC):
 
 class JDBCWriter(WriterABC):
 
-    def write(self, df: sql.DataFrame, conf: ETLConf):
+    def write(self, df: sql.DataFrame, conf: ETLConf, spark: Optional[sql.SparkSession] = None):
         df_writer = df.write
 
         return (

@@ -28,6 +28,7 @@ ENV \
     HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop \
     HIVE_HOME=/opt/hive \
     HIVE_CONF_DIR=/opt/hive/conf \
+    SPARK_CONF_DIR=/opt/spark \
     PATH="${PATH}:/opt/hadoop/bin:/opt/hadoop/sbin:/opt/hive/bin"
 
 COPY README.rst setup.py ./

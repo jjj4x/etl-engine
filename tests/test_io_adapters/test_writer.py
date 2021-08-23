@@ -29,7 +29,7 @@ class TestHDFSWriter:
         with sql.SparkSession.builder.config(conf=spark_conf).getOrCreate() as spark:
             df = spark.range(500).toDF("number")
             # Run
-            io_adapters.HDFSWriter(spark).write(df, conf)
+            io_adapters.HDFSWriter().write(df, conf)
 
             df = spark.read.parquet(conf.etl.target.location)
 
@@ -77,7 +77,7 @@ class TestHDFSWriter:
             df.createTempView('my_view')
 
             # First Run
-            writer = io_adapters.HDFSWriter(spark)
+            writer = io_adapters.HDFSWriter()
             writer.write(df, conf)
             df_after_first_run = spark.read.parquet(conf.etl.target.location)
 
@@ -124,7 +124,7 @@ class TestHDFSWriter:
             df = spark.createDataFrame(zip(ids, dates, sexes), schema=schema)
 
             # Run
-            writer = io_adapters.HDFSWriter(spark)
+            writer = io_adapters.HDFSWriter()
             writer.write(df, conf)
             df_after_first_run = spark.read.parquet(conf.etl.target.location)
 
@@ -164,7 +164,7 @@ class TestTableWriters:
         with sql.SparkSession.builder.config(conf=spark_conf).enableHiveSupport().getOrCreate() as spark:
             df = spark.range(500).toDF("number")
             # Run
-            io_adapters.TableWriter(spark).write(df, conf)
+            io_adapters.TableWriter().write(df, conf, spark)
 
             df = spark.sql('select * from my_table')
 
@@ -207,7 +207,7 @@ class TestExternalTableWriters:
             ])
 
             df = spark.createDataFrame(zip(ids, dates, sexes), schema=schema)
-            io_adapters.ExternalTableWriter(spark).write(df, conf)
+            io_adapters.ExternalTableWriter().write(df, conf, spark)
 
             df = spark.sql(f'select * from {conf.etl.target.fqdn}')
             assert df.count() == 100
@@ -238,7 +238,7 @@ class TestJDBCWriter:
         with sql.SparkSession.builder.config(conf=spark_conf).getOrCreate() as spark:
             df = spark.range(500).toDF("number")
             # Run
-            io_adapters.JDBCWriter(spark).write(df, conf)
+            io_adapters.JDBCWriter().write(df, conf)
 
             df = (
                 spark

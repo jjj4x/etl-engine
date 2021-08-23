@@ -13,8 +13,9 @@ from etl_engine.io_adapters import (
     TableWriter,
     ExternalTableWriter,
 )
-from strategies import (
-    SnapshotETLStrategy,
+from etl_engine.strategies import (
+    SnapshotStrategy,
+    HWMStrategy,
 )
 
 LOG = getLogger(__name__)
@@ -40,30 +41,18 @@ class ETLEngine:
             writer_class = TableWriter
         elif target_system_type == 'ExternalTable':
             writer_class = ExternalTableWriter
-        else:
+        else:  # Any RDBMS
             writer_class = JDBCWriter
 
         reader = reader_class()
-        writer = writer_class(spark)
+        writer = writer_class()
 
         strategy = self.conf.etl.strategy
         if strategy == 'snapshot':
-            strategy = SnapshotETLStrategy(reader, writer)
-            ...  # TODO
-        elif strategy == 'snapshot_use_checkpoints':
-            ...  # TODO
-        elif strategy == 'snapshot_use_watermarks':
-            ...  # TODO
-        elif strategy == 'snapshot_checkpointed_with_watermark':
-            ...  # TODO
-        elif strategy == 'discrete_interval':
-            ...  # TODO
-        elif strategy == 'discrete_interval_checkpointed':
-            ...  # TODO
-        elif strategy == 'increment_':
-            ...  # TODO
-        elif strategy == 'watermark_checkpointed':
-            ...  # TODO
+            strategy = SnapshotStrategy(reader, writer)
+        elif strategy == 'hwm':
+            strategy = HWMStrategy(reader, writer, self.conf.metastore)
+        # TODO: Incremental HWM strategy.
         else:
             raise ValueError(f'Unrecognized ETL strategy: {strategy}.')
 
@@ -74,5 +63,5 @@ class ETLEngine:
             return self._execute(spark)
 
         spark_conf = SparkConf().setAll(self.conf.spark.conf)
-        with sql.SparkSession.builder.config(conf=spark_conf).getOrCreate() as spark:
+        with sql.SparkSession.builder.config(conf=spark_conf).enableHiveSupport().getOrCreate() as spark:
             return self._execute(spark)

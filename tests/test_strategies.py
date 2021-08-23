@@ -66,14 +66,11 @@ class TestSnapshotStrategy:
             },
         )
 
-        # TODO: make configuration via conf optional.
-        # TODO: make so etl conf can be instantiated with validate=True|False
-        # TODO: make more a unified interface for readers and writers (spark session..)
         spark_conf = SparkConf().setAll(conf.spark.conf)
         with sql.SparkSession.builder.config(conf=spark_conf).getOrCreate() as spark:
             reader = io_adapters.JDBCReader()
-            writer = io_adapters.HDFSWriter(spark)
-            strategy = strategies.SnapshotETLStrategy(reader, writer)
+            writer = io_adapters.HDFSWriter()
+            strategy = strategies.SnapshotStrategy(reader, writer)
             strategy.load(spark, conf)
 
             df = spark.read.load(path=conf.etl.target.location).cache()
@@ -147,14 +144,11 @@ class TestSnapshotUseHWMStrategy:
         )
 
         metastore = InMemoryMetastore()
-        # TODO: make configuration via conf optional.
-        # TODO: make so etl conf can be instantiated with validate=True|False
-        # TODO: make more a unified interface for readers and writers (spark session..)
         spark_conf = SparkConf().setAll(conf.spark.conf)
         with sql.SparkSession.builder.config(conf=spark_conf).getOrCreate() as spark:
             reader = io_adapters.JDBCReader()
-            writer = io_adapters.HDFSWriter(spark)
-            strategy = strategies.SnapshotUseHWMStrategy(reader, writer, metastore)
+            writer = io_adapters.HDFSWriter()
+            strategy = strategies.HWMStrategy(reader, writer, metastore)
             strategy.load(spark, conf)
 
             df = spark.read.load(path=conf.etl.target.location).cache()

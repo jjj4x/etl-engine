@@ -24,14 +24,14 @@ class TestSQL:
         )
 
         query = dialects.Query(
-            hint='/* stream(id) */',
+            hint='/*+ stream(id) */',
             columns=['*', 'coalesce(create_date, update_date) as business_date'],
             from_='account.balance',
             where=['hwm > 0'],
             other='or hwm < 1000',
         )
         other = (
-            'select /* stream(id) */ '
+            'select /*+ stream(id) */ '
             '*, coalesce(create_date, update_date) as business_date '
             'from account.balance '
             'where 1 = 1 and (hwm > 0) or hwm < 1000'
@@ -39,3 +39,17 @@ class TestSQL:
         assert query.sql == other
         assert query == other
         assert query == query
+
+        query = dialects.Query(
+            columns=['*', 'coalesce(create_date, update_date) as business_date'],
+            from_='account.balance',
+            where=['hwm > 0 -- greater than zero'],
+            other='or hwm < 1000',
+        )
+        assert '--' not in query.sql
+
+        query = dialects.Query(
+            from_='account.balance',
+            where=['hwm > 0; drop table'],
+        )
+        assert query.sql == 'select * from account.balance where 1 = 1 and (hwm > 0)'

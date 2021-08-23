@@ -29,7 +29,7 @@ class TestHDFSReader:
         with sql.SparkSession.builder.config(conf=spark_conf).getOrCreate() as spark:
             df_write = spark.range(500).toDF("number")
             # Run
-            io_adapters.HDFSWriter(spark).write(df_write, conf)
+            io_adapters.HDFSWriter().write(df_write, conf)
 
             df_read = io_adapters.HDFSReader().read(spark, conf)
 
@@ -91,7 +91,7 @@ class TestHDFSReader:
             ])
 
             # Write
-            writer = io_adapters.HDFSWriter(spark)
+            writer = io_adapters.HDFSWriter()
 
             writer.write(spark.createDataFrame(data1, schema=schema1), conf)
             writer.write(spark.createDataFrame(data2, schema=schema2), conf)
