@@ -16,6 +16,7 @@ from etl_engine.io_adapters import (
 from etl_engine.strategies import (
     SnapshotStrategy,
     HWMStrategy,
+    HWMIncrementStrategy,
 )
 
 LOG = getLogger(__name__)
@@ -48,13 +49,14 @@ class ETLEngine:
         writer = writer_class()
 
         strategy = self.conf.etl.strategy
-        if strategy == 'snapshot':
+        if strategy.name == 'snapshot':
             strategy = SnapshotStrategy(reader, writer)
-        elif strategy == 'hwm':
+        elif strategy.name == 'hwm':
             strategy = HWMStrategy(reader, writer, self.conf.metastore)
-        # TODO: Incremental HWM strategy.
+        elif strategy.name == 'hwm_increment':
+            strategy = HWMIncrementStrategy(reader, writer, self.conf.metastore)
         else:
-            raise ValueError(f'Unrecognized ETL strategy: {strategy}.')
+            raise ValueError(f'Unrecognized ETL strategy: {strategy.name}.')
 
         strategy.load(spark, self.conf)
 

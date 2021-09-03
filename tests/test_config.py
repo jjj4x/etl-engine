@@ -62,7 +62,9 @@ class TestConfig:
                 'location': 'hive/warehouse/raw/account_balance/',
                 'system': 'HDFS',
             },
-            strategy='increment',
+            strategy={
+                'name': 'snapshot',
+            },
         )
         assert etl.source.hwm.value == '0'
         assert etl.source.hwm.literal_value == 0
@@ -83,7 +85,9 @@ class TestConfig:
         etl = config.ETL(
             source={'schema': 'public', 'name': 'users'},
             target={'location': '/tmp/users'},
-            strategy='snapshot',
+            strategy={
+                'name': 'snapshot',
+            },
         )
         assert isinstance(etl.source, config.SourceTarget)
         assert isinstance(etl.target, config.SourceTarget)
@@ -145,7 +149,9 @@ class TestConfig:
             etl=config.ETL(
                 source={'schema': 'public', 'name': 'users'},
                 target={'location': '/tmp/users'},
-                strategy='snapshot',
+                strategy={
+                    'name': 'snapshot',
+                },
             ),
         )
         assert isinstance(conf.etl, config.ETL)

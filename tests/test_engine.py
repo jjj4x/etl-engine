@@ -56,7 +56,9 @@ class TestETLEngine:
                 ],
             },
             'etl': {
-                'strategy': 'hwm',
+                'strategy': {
+                    'name': 'hwm',
+                },
                 'source': {
                     'system': 'Postgres',
                     'schema': 'public',

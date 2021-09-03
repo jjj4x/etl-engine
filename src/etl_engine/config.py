@@ -1,4 +1,6 @@
 from dataclasses import dataclass, field
+from datetime import timedelta
+from numbers import Number
 from typing import Tuple, List, MutableMapping, Union
 
 from etl_engine.metastore import HWM, MetastoreABC, InMemoryMetastore, metastore_factory
@@ -29,16 +31,29 @@ class SourceTarget:
 
 
 @dataclass
+class Strategy:
+    name: str = field(default='')
+    increment: Union[None, Number, timedelta, str] = field(default=None)
+
+    def __post_init__(self):
+        if isinstance(self.increment, str):
+            key, value = self.increment.split('=')
+            self.increment = timedelta(**{key: value})
+
+
+@dataclass
 class ETL:
     source: Union[SourceTarget, MutableMapping] = field(default_factory=SourceTarget)
     target: Union[SourceTarget, MutableMapping] = field(default_factory=SourceTarget)
-    strategy: str = field(default='')
+    strategy: Union[Strategy, MutableMapping] = field(default_factory=Strategy)
 
     def __post_init__(self):
         if not isinstance(self.source, SourceTarget):
             self.source = SourceTarget(**self.source)
         if not isinstance(self.target, SourceTarget):
             self.target = SourceTarget(**self.target)
+        if not isinstance(self.strategy, Strategy):
+            self.strategy = Strategy(**self.strategy)
 
     def validate(self):
         self.source.validate()
